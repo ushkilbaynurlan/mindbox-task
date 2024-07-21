@@ -13,16 +13,16 @@ spec:
         app: myapp
     spec:
       containers:
-      - name: my-app-container
-        image: my-app-image:latest
-        resources:
+      - name: myapp-container
+        image: myapp-image:latest
+        resources:    # Указываем resources.requests и resources.limits
           requests:
             memory: "128Mi"
             cpu: "0.1"
           limits:
             memory: "128Mi"
             cpu: "1"
-        startupProbe:
+        startupProbe:             # Для проверки инициализации
           httpGet:
             path: /healthz
             port: 8080
@@ -30,19 +30,23 @@ spec:
           periodSeconds: 10
           failureThreshold: 3
       affinity:
-        podAntiAffinity:
+        podAntiAffinity:           # Чтобы поды были в разных зонах 
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
               - key: app
                 operator: In
                 values:
-                - my-app
+                - myapp
             topologyKey: "topology.kubernetes.io/zone"
+      strategy:    # Для отказоустойчовсти используем Rolling Update 
+        rollingUpdate:
+          maxSurge: 1   # Не более одного пода может быть недоступен во время обновления
+          maxUnavailable: # Создается один дополнительный под во время обновления
 
 ---
 apiVersion: autoscaling/v2beta2
-kind: HorizontalPodAutoscaler
+kind: HorizontalPodAutoscaler   #  Настроим HPA для автоматического масштабирования подов в зависимости от нагрузки
 metadata:
   name: myapp-hpa
 spec:
@@ -50,8 +54,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
-  minReplicas: 2
-  maxReplicas: 10
+  minReplicas: 2  # Указываем минимальное и максимальное количество реплик
+  maxReplicas: 10  
   metrics:
   - type: Resource
     resource:
